@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "facial3d"
+version = "0.1.0"
+description = "3D facial symmetry, proportion and attractiveness analysis (MEng thesis prototype)"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["src"]

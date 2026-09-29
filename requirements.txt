@@ -1,0 +1,9 @@
+numpy
+scipy
+matplotlib
+trimesh
+open3d
+pyvista
+mediapipe
+opencv-python
+ipykernel

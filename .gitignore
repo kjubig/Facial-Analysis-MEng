@@ -1,0 +1,29 @@
+# Dane twarzy (skany, zdjęcia, nagrania) — nigdy do publicznego repo (licencje + RODO)
+data/
+*.obj
+*.ply
+*.glb
+*.gltf
+*.stl
+*.bag
+*.mtl
+
+# Wyniki generowane przez skrypty
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Modele (pobierane skryptem)
+models/*.task
+
+# System / edytory
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,105 @@
+# Konfiguracja prototypu: progi i parametry w jednym miejscu, nie w kodzie.
+# Progi kontroli jakości są WSTĘPNE (03_kwestie_wykonania.md, sekcja 4.3);
+# docelowo wynikną z eksperymentów E1 i E2.
+
+models:
+  face_landmarker: models/face_landmarker.task
+  face_landmarker_sha256: 64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff
+  face_landmarker_url: https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+  canonical_face: models/canonical_face_model.obj
+  canonical_face_sha256: 8bac80443397e113f41a8b565ea72c59390bc031d9defab289dba7bc0c54e618
+  canonical_face_url: https://raw.githubusercontent.com/google-ai-edge/mediapipe/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj
+
+landmarks:
+  num_faces: 2                  # szukamy dwóch, żeby wykryć „więcej niż jedna twarz”
+  min_detection_confidence: 0.5
+  min_presence_confidence: 0.5
+  fallback_crops: [1.0, 0.7, 0.5]   # gdy twarz za mała w kadrze: wycinki środka zdjęcia
+  iris_diameter_mm: 11.7        # skala zapasowa; błąd ~3–4% (Pirayesh 2023)
+  assumed_focal_35mm: 50.0      # gdy zdjęcie nie ma ogniskowej w EXIF (do solvePnP)
+
+quality:
+  min_iod_px: 80                # minimalna odległość źrenic w pikselach (zdjęcie z telefonu)
+  min_iod_px_rgbd: 50           # to samo dla obrazu kolorowego D455 (z 0,6 m ok. 65 px)
+  max_center_offset: 0.10       # czubek nosa od środka kadru (ułamek wymiaru)
+  max_yaw_deg: 2.0              # ≤ 2°: obrót o 3° daje ~1 mm pozornej asymetrii
+  max_pitch_deg: 3.0
+  max_roll_deg: 2.0
+  max_eye_blink: 0.35
+  max_expression: 0.30
+  expression_blendshapes: [mouthSmileLeft, mouthSmileRight, jawOpen, mouthFunnel,
+                           mouthPucker, browInnerUp, browDownLeft, browDownRight,
+                           cheekPuff, mouthFrownLeft, mouthFrownRight]
+  sharpness_iod_px: 150         # przed pomiarem ostrości skalujemy twarz do IOD = 150 px
+  min_sharpness: 20.0           # wariancja Laplasjanu — próg do kalibracji na danym telefonie
+  max_clipped_fraction: 0.01    # prześwietlone + niedoświetlone piksele twarzy
+  min_illumination_ratio: 0.90  # jasność policzków: ciemniejszy / jaśniejszy
+  # tylko 3D
+  depth_distance_mm: [450, 800] # okno odległości czubka nosa od kamery
+  min_depth_fill: 0.95          # odsetek pikseli twarzy z poprawną głębią
+
+# Wskaźniki: odległości między punktami antropometrycznymi i proporcje.
+# Punkty: patrz core/regions.py (kandydaci — do weryfikacji wzrokowej).
+features:
+  distances:                    # nazwa: [punkt A, punkt B, opis]
+    ipd:     [pupil_R, pupil_L, "odległość źrenic (jednostka normalizacji)"]
+    en_en:   [en_R, en_L, "szerokość międzykątowa wewnętrzna"]
+    ex_ex:   [ex_R, ex_L, "szerokość dwuoczna"]
+    eye_R:   [ex_R, en_R, "szerokość szpary powiekowej P"]
+    eye_L:   [ex_L, en_L, "szerokość szpary powiekowej L"]
+    al_al:   [al_R, al_L, "szerokość nosa"]
+    ch_ch:   [ch_R, ch_L, "szerokość ust"]
+    zy_zy:   [zy_R, zy_L, "szerokość twarzy (przybliżona)"]
+    go_go:   [go_R, go_L, "szerokość żuchwy (przybliżona)"]
+    n_sn:    [n, sn, "wysokość nosa"]
+    sn_gn:   [sn, gn, "wysokość dolnego piętra twarzy"]
+    n_gn:    [n, gn, "wysokość morfologiczna twarzy"]
+    sn_sto:  [sn, sto, "wysokość wargi górnej"]
+    sto_gn:  [sto, gn, "warga dolna z brodą"]
+  ratios:                       # nazwa: [licznik, mianownik, opis]
+    facial_index:  [n_gn, zy_zy, "indeks twarzowy morfologiczny"]
+    nasal_index:   [al_al, n_sn, "indeks nosowy"]
+    mouth_nose:    [ch_ch, al_al, "szerokość ust / szerokość nosa"]
+    en_en_eye:     [en_en, eye_R, "odstęp oczu / szerokość oka P (piąte twarzy)"]
+    lower_face:    [sn_gn, n_gn, "udział dolnego piętra w wysokości twarzy"]
+    lip_chin:      [sn_sto, sto_gn, "warga górna / warga dolna z brodą"]
+    ipd_face:      [ipd, zy_zy, "odległość źrenic / szerokość twarzy (Pallett 2010)"]
+
+symmetry3d:
+  landmark_depth_window: 2      # promień okna (px) przy odczycie głębi punktu
+  face_depth_window_mm: [-40, 130]  # głębia twarzy względem czubka nosa (reszta = tło)
+  eval_erode_frac: 0.08         # pas brzegowy twarzy wyłączony z oceny (ułamek szerokości)
+  normals_k: 16                 # sąsiedzi do wektorów normalnych
+  icp_iterations: 30
+  icp_max_corr_mm: 8.0          # maksymalna odległość pary punktów w ICP
+  icp_tukey_mm: 1.5             # odporna funkcja straty: ogranicza wpływ asymetrycznych okolic.
+                                # Na danych syntetycznych (szum D455 przy 0,6 m) 1,5 mm odzyskuje
+                                # 2,6 z 3 mm przesunięcia brody (3,0 mm: tylko 2,4). Dobierać ≈ 2,3 × RMS
+                                # szumu reszt — do ustalenia na prawdziwych danych z D455.
+  max_nn_mm: 8.0                # w ocenie pomijamy punkty bez odpowiednika
+  smooth_k: 30                  # wygładzanie mapy: średnia z k najbliższych punktów (szum D455)
+  heatmap_range_mm: 2.0         # zakres skali barw mapy asymetrii (±)
+
+# Emulacja D455 (do czasu własnych nagrań): wirtualna kamera kolorowa D455
+# z głębią wyrównaną do koloru. Parametry orientacyjne — patrz README.
+emulation:
+  camera: {width: 1280, height: 800, fx: 640.0, fy: 640.0, cx: 640.0, cy: 400.0}
+  distance_mm: 600              # czubek nosa ~0,6 m od kamery (Min-Z D455: 52 cm)
+  baseline_mm: 95.0
+  subpixel: 0.08                # wzór Intela: RMS = z² · subpixel / (f · B)
+  depth_unit_m: 0.0001          # zapis głębi co 0,1 mm (uint16)
+  background_mm: 1400           # ściana za osobą
+  dropout: 0.005                # losowe braki głębi
+  grazing_cos: 0.15             # brak głębi na powierzchniach prawie równoległych do promienia
+
+# Dane demonstracyjne: 5 osób z London Set (zróżnicowane płeć i pochodzenie).
+demo:
+  london_ids: ["001", "004", "005", "006", "025"]
+
+# Face Research Lab London Set (DeBruine & Jones 2017, CC BY 4.0), figshare 5047666 v5.
+datasets:
+  london:
+    neutral_front.zip:        {url: "https://ndownloader.figshare.com/files/8541961",  md5: 236c1c94defbb34a79074b195841cfd6}
+    london_faces_info.csv:    {url: "https://ndownloader.figshare.com/files/27397184", md5: 52e9d142812130f0b19af168260fb160}
+    london_faces_ratings.csv: {url: "https://ndownloader.figshare.com/files/8542045",  md5: fe3743a1bb6b2b414e5170b8723aec1b}
+    facelab_london.pdf:       {url: "https://ndownloader.figshare.com/files/8541955",  md5: d1dc4fe531baad6bfd363d2f65ceaac2}

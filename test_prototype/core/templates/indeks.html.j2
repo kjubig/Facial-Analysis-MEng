@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+{% include "_styl.html.j2" %}
+</head>
+<body><main>
+<h1>{{ title }}</h1>
+<p class="pod">Prototyp testowy systemu analizy symetrii twarzy · tabele CSV: <code>wyniki_2D.csv</code>, <code>wyniki_3D.csv</code></p>
+
+{% set r2 = rows | selectattr("typ", "equalto", "2D") | list %}
+{% if r2 %}
+<h2>Zdjęcia 2D</h2>
+<div class="karta tabwrap"><table>
+<tr><th>ID</th><th>Kontrola jakości</th><th class="l">asymetria RMS [% IPD]</th><th class="l">≈ mm</th>
+  <th class="l">broda od osi [≈ mm]</th><th class="l">kąciki ust: L − P pion [≈ mm]</th><th class="l">yaw [°]</th></tr>
+{% for x in r2 %}
+<tr><td><a href="{{ x.folder }}/raport.html">{{ x.id }}</a></td>
+  <td>{% if x.qc_ok %}<span class="ok">✔ spełniona</span>{% else %}<span class="błąd">✘</span> {{ x.qc_bledy }}{% endif %}</td>
+  <td class="l">{{ x.asym_rms_proc_ipd | num(2) }}</td><td class="l">{{ x.asym_rms_mm_orient | num(2) }}</td>
+  <td class="l">{{ x.broda_mm_orient | num(2, true) }}</td><td class="l">{{ x.kaciki_ust_pion_mm_orient | num(2, true) }}</td>
+  <td class="l">{{ x.yaw_deg | num(1, true) }}</td></tr>
+{% endfor %}
+</table></div>
+{% endif %}
+
+{% set r3 = rows | selectattr("typ", "equalto", "3D") | list %}
+{% if r3 %}
+<h2>Zdjęcia RGB-D (format D455)</h2>
+<div class="karta tabwrap"><table>
+<tr><th>ID</th><th>Kontrola jakości</th><th class="l">powierzchnia RMS wygł. [mm]</th><th class="l">surowe [mm]</th>
+  <th class="l">broda od płaszczyzny [mm]</th><th class="l">punkty RMS [mm]</th><th class="l">tęczówka vs głębia (IPD)</th></tr>
+{% for x in r3 %}
+<tr><td><a href="{{ x.folder }}/raport.html">{{ x.id }}</a></td>
+  <td>{% if x.qc_ok %}<span class="ok">✔ spełniona</span>{% else %}<span class="błąd">✘</span> {{ x.qc_bledy }}{% endif %}</td>
+  <td class="l">{{ x.pow_rms_wygl_mm | num(2) }}</td><td class="l">{{ x.pow_rms_mm | num(2) }}</td>
+  <td class="l">{{ x.broda_od_plaszczyzny_mm | num(2, true) }}</td><td class="l">{{ x.pkt_rms_mm | num(2) }}</td>
+  <td class="l">{{ x.skala_teczowki_ipd_proc | num(1, true) }} %</td></tr>
+{% endfor %}
+</table></div>
+{% endif %}
+
+{% if pairs %}
+<h2>Te same osoby: 2D a 3D</h2>
+<div class="karta tabwrap"><table>
+<tr><th>ID</th><th class="l">broda 2D [≈ mm]</th><th class="l">broda 3D [mm]</th><th class="l">kąciki ust 2D [≈ mm]</th><th class="l">kąciki ust 3D [mm]</th></tr>
+{% for id, a, b in pairs %}
+<tr><td>{{ id }}</td><td class="l">{{ a.broda_mm_orient | num(2, true) }}</td><td class="l">{{ b.broda_od_plaszczyzny_mm | num(2, true) }}</td>
+  <td class="l">{{ a.kaciki_ust_pion_mm_orient | num(2, true) }}</td><td class="l">{{ b.kaciki_ust_pion_mm | num(2, true) }}</td></tr>
+{% endfor %}
+</table><p class="pod">W emulacji D455 geometria pochodzi z tego samego zdjęcia, więc zgodność 2D–3D jest tu zawyżona — prawdziwy test wymaga par telefon + D455.</p></div>
+{% endif %}
+</main></body></html>

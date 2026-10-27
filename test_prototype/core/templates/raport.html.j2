@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raport {{ r.id }} ({{ r.typ }})</title>
+{% include "_styl.html.j2" %}
+</head>
+<body><main>
+<p><a href="../index.html">← wszystkie wyniki</a></p>
+<h1>Raport {{ r.id }} — analiza {{ r.typ }}</h1>
+<p class="pod">Źródło: <code>{{ r.zrodlo }}</code> · {{ r.wersja.czas_analizy }} · prototyp {{ r.wersja.prototyp }},
+  {{ r.wersja.commit }}, konfiguracja {{ r.wersja.konfiguracja }}, mediapipe {{ r.wersja.biblioteki.mediapipe }}</p>
+
+{% set zrodlo = (r.metadane.zrodlo if r.metadane and r.metadane.zrodlo else "") %}
+{% if zrodlo %}
+<div class="karta uwaga"><b>Uwaga — dane zastępcze:</b> {{ zrodlo }}.
+{% if zrodlo.startswith("EMULACJA") %} Geometria twarzy pochodzi z siatki MediaPipe (głębia zgadywana z jednego zdjęcia), więc wynik 3D
+sprawdza działanie potoku, a nie prawdziwą asymetrię 3D tej osoby.{% endif %}</div>
+{% endif %}
+
+<h2>Kontrola jakości: <span class="{{ 'ok' if r.kontrola_jakosci.ok else 'błąd' }}">{{ 'spełniona' if r.kontrola_jakosci.ok else 'NIESPEŁNIONA' }}</span></h2>
+<div class="karta tabwrap"><table>
+<tr><th></th><th>Warunek</th><th>Wartość</th><th>Kryterium / uwagi</th></tr>
+{% for c in r.kontrola_jakosci.checks %}
+<tr><td class="{{ c.status }}">{{ c.status | status_icon }}</td><td>{{ c.warunek }}</td><td class="l">{{ c.wartosc }}</td><td>{{ c.opis }}</td></tr>
+{% endfor %}
+</table>
+<p class="pod">Progi są wstępne (03_kwestie_wykonania.md, sekcja 4.3). ✔ spełniony, ✘ niespełniony, ℹ tylko informacyjnie.</p></div>
+
+{% if r.obrazy %}
+<h2>Obrazy</h2>
+<div class="obrazy">
+  <figure><img src="{{ r.obrazy.nakladka }}" alt="nakładka punktów"><figcaption>Punkty MediaPipe pokolorowane asymetrią lokalną (% IPD).
+  Turkusowa linia: oś symetrii z metody odbicia; żółta: oś górnej części twarzy (czoło–grzbiet nosa). Białe: punkty antropometryczne (kandydaci).</figcaption></figure>
+  {% if r.obrazy.glebia %}
+  <figure><img src="{{ r.obrazy.glebia }}" alt="mapa głębi"><figcaption>Głębia twarzy (jaśniej = bliżej kamery). Czarne piksele = brak pomiaru.</figcaption></figure>
+  <figure><img src="{{ r.obrazy.mapa }}" alt="mapa asymetrii"><figcaption>Asymetria powierzchni po wygładzeniu (skala ±{{ r.obrazy.zakres_mapy_mm | num(0) }} mm):
+  czerwony = okolica bardziej wysunięta niż lustrzana po drugiej stronie, niebieski = cofnięta. Chmura: <code>{{ r.obrazy.chmura }}</code>.</figcaption></figure>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if r.typ == "2D" and r.symetria %}
+{% set s = r.symetria %}
+<h2>Symetria (punkty 2D)</h2>
+<div class="liczby">
+  <div class="liczba"><b>{{ s.globalna.rms.proc_ipd | num(2) }} %</b><span>asymetria RMS (% IPD)</span></div>
+  <div class="liczba"><b>≈ {{ s.globalna.rms.mm | num(2) }} mm</b><span>to samo w mm (skala z tęczówki)</span></div>
+  <div class="liczba"><b>{{ s.globalna.procrustes | num(4) }}</b><span>odległość Prokrustesa (bezwymiarowa)</span></div>
+</div>
+{% include "_symetria_tabele.html.j2" %}
+{% endif %}
+
+{% if r.typ == "3D" and r.symetria_powierzchnia %}
+{% set s = r.symetria_powierzchnia %}
+<h2>Asymetria powierzchni 3D (odbicie + ICP)</h2>
+<div class="liczby">
+  <div class="liczba"><b>{{ s.wygladzone.rms_mm | num(2) }} mm</b><span>RMS po wygładzeniu (k = {{ s.wygladzone.k }})</span></div>
+  <div class="liczba"><b>{{ s.rms_mm | num(2) }} mm</b><span>RMS surowe (z szumem głębi)</span></div>
+  <div class="liczba"><b>{{ s.wygladzone.p95_abs_mm | num(2) }} mm</b><span>95. percentyl |odległości| (wygładzone)</span></div>
+  <div class="liczba"><b>{{ (100 * s.pokrycie) | num(0) }} %</b><span>pokrycie ({{ s.liczba_punktow }} punktów)</span></div>
+</div>
+<p class="pod">Dla porównania: u zdrowych dorosłych RMS ≈ 0,63 ± 0,16 mm (Kornreich i in. 2016, skaner 3dMD). Szum D455 z 0,6 m to ok. 0,45 mm na piksel.</p>
+<div class="karta tabwrap"><table>
+<tr><th>Region</th><th class="l">średnia |odl.| [mm]</th><th class="l">strona P (średnia) [mm]</th><th class="l">strona L (średnia) [mm]</th><th class="l">punktów</th></tr>
+{% for g in s.regiony %}
+<tr><td>{{ g.region }}</td><td class="l">{{ g.srednia_abs_mm | num(2) }}</td><td class="l">{{ g.srednia_P_mm | num(2, true) }}</td><td class="l">{{ g.srednia_L_mm | num(2, true) }}</td><td class="l">{{ g.liczba_punktow }}</td></tr>
+{% endfor %}
+</table></div>
+<div class="karta tabwrap"><table>
+<tr><th>Punkt środkowy</th><th class="l">odległość od płaszczyzny symetrii [mm] (+ = w stronę lewej strony pacjenta)</th></tr>
+{% for m in s.srodkowe_od_plaszczyzny %}<tr><td>{{ m.punkt }}</td><td class="l">{{ m.mm | num(2, true) }}</td></tr>{% endfor %}
+</table></div>
+
+{% set s = r.symetria_punkty %}
+<h2>Symetria punktów 3D (mm)</h2>
+<div class="liczby">
+  <div class="liczba"><b>{{ s.globalna.rms.mm | num(2) }} mm</b><span>asymetria RMS punktów 3D</span></div>
+  <div class="liczba"><b>{{ s.globalna.rms.proc_ipd | num(2) }} %</b><span>to samo w % IPD</span></div>
+  <div class="liczba"><b>{{ r.punkty_z_glebia }}/478</b><span>punktów z poprawną głębią</span></div>
+</div>
+{% include "_symetria_tabele.html.j2" %}
+
+<h2>Skala: tęczówka (jak w 2D) a pomiar z głębi</h2>
+<div class="karta tabwrap"><table>
+<tr><th>Odległość</th><th class="l">z tęczówki [mm]</th><th class="l">z głębi [mm]</th><th class="l">różnica</th></tr>
+{% for d in r.skala_teczowka_vs_glebia %}
+<tr><td>{{ d.nazwa }}</td><td class="l">{{ d.mm_z_teczowki_2d | num(1) }}</td><td class="l">{{ d.mm_z_glebi_3d | num(1) }}</td><td class="l">{{ d.roznica_proc | num(1, true) }} %</td></tr>
+{% endfor %}
+</table><p class="pod">Ten sam obraz kolorowy: wymiary przeliczone ze średnicy tęczówki (11,7 mm) i zmierzone w 3D z mapy głębi.</p></div>
+{% endif %}
+
+{% if r.wskazniki %}
+<h2>Wskaźniki</h2>
+<div class="karta tabwrap"><table>
+<tr><th>Odległość</th><th>Opis</th><th class="l">% IPD</th><th class="l">{{ '≈ mm' if r.wskazniki.mm_orientacyjne else 'mm' }}</th></tr>
+{% for d in r.wskazniki.odleglosci %}
+<tr><td><code>{{ d.nazwa }}</code></td><td>{{ d.opis }}</td><td class="l">{{ d.proc_ipd | num(1) }}</td><td class="l">{{ d.mm | num(1) }}</td></tr>
+{% endfor %}
+</table></div>
+<div class="karta tabwrap"><table>
+<tr><th>Proporcja / kąt</th><th>Opis</th><th class="l">Wartość</th></tr>
+{% for d in r.wskazniki.proporcje %}<tr><td><code>{{ d.nazwa }}</code></td><td>{{ d.opis }}</td><td class="l">{{ d.wartosc | num(3 if d.wartosc < 10 else 1) }}</td></tr>{% endfor %}
+{% for d in r.wskazniki.katy %}<tr><td><code>{{ d.nazwa }}</code></td><td>{{ d.opis }}</td><td class="l">{{ d.stopnie | num(1) }}°</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+<h2>Ograniczenia tego wyniku</h2>
+<div class="karta"><ul>
+  <li>Punkty antropometryczne to <b>kandydaci</b> z tabeli w 02_stack_technologiczny.md — wymagają weryfikacji wzrokowej.</li>
+  {% if r.typ == "2D" %}<li>Wartości w mm są <b>orientacyjne</b>: skala ze średnicy tęczówki (11,7 mm) ma błąd ok. 3–4%. Miary w % IPD i proporcje nie zależą od skali.</li>
+  <li>Zdjęcia 2D nie korygują obrotu głowy: przy |yaw| &gt; 2° część asymetrii jest pozorna.</li>{% endif %}
+  {% if r.typ == "3D" %}<li>Metoda odbicia częściowo „wchłania” asymetrię w położeniu płaszczyzny symetrii (na danych syntetycznych odzyskuje ok. 85–90% przesunięcia brody).</li>{% endif %}
+  <li>Prototyp testowy — nie służy do oceny klinicznej.</li>
+</ul></div>
+</main></body></html>

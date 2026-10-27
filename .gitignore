@@ -1,0 +1,14 @@
+# Środowisko Pythona
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Dane, modele i wyniki NIGDY nie trafiają do repo:
+# licencje zbiorów (np. CFD: zakaz redystrybucji), dane osobowe, rozmiar.
+**/data/
+**/models/
+**/outputs/
+
+# macOS
+.DS_Store

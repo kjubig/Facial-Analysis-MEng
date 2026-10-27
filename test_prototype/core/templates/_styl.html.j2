@@ -1,0 +1,30 @@
+<style>
+  :root { --tlo:#f6f7f9; --karta:#fff; --tekst:#1d2330; --szary:#5d6677; --linia:#e1e4ea;
+          --ok:#1f8a3b; --blad:#c62828; --info:#5d6677; --akcent:#0b6aa2; --uwaga:#fff4d6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --tlo:#14171d; --karta:#1c2028; --tekst:#e6e8ec; --szary:#9aa3b2; --linia:#2c323d;
+            --ok:#5cc177; --blad:#ff6b6b; --info:#9aa3b2; --akcent:#5fb3e6; --uwaga:#3a3220; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--tlo); color: var(--tekst);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 10px; }
+  .pod { color: var(--szary); margin: 0 0 16px; }
+  .karta { background: var(--karta); border: 1px solid var(--linia); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+  .uwaga { background: var(--uwaga); border-color: #e0b94f; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--linia); vertical-align: top; }
+  th { color: var(--szary); font-weight: 600; }
+  td.l { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ok { color: var(--ok); font-weight: 700; } .błąd { color: var(--blad); font-weight: 700; } .info { color: var(--info); }
+  .obrazy { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 520px)); gap: 12px; }
+  .obrazy figure { margin: 0; } .obrazy img { width: 100%; border-radius: 8px; border: 1px solid var(--linia); }
+  figcaption { color: var(--szary); font-size: 13px; margin-top: 4px; }
+  .liczby { display: flex; flex-wrap: wrap; gap: 12px; }
+  .liczba { background: var(--karta); border: 1px solid var(--linia); border-radius: 10px; padding: 10px 14px; min-width: 170px; }
+  .liczba b { display: block; font-size: 22px; } .liczba span { color: var(--szary); font-size: 13px; }
+  .tabwrap { overflow-x: auto; }
+  a { color: var(--akcent); }
+  code { font-size: 13px; }
+</style>

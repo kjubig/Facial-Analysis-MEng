@@ -1,0 +1,19 @@
+{% set jedn = 'mm' if r.typ == '3D' else '≈ mm' %}
+<div class="karta tabwrap"><table>
+<tr><th>Para punktów</th><th class="l">boczna: |L| − |P| od osi [% IPD]</th><th class="l">[{{ jedn }}]</th>
+  <th class="l">pionowa: L − P [% IPD]</th><th class="l">[{{ jedn }}]</th>{% if r.typ == '3D' %}<th class="l">głębokość: L − P [mm]</th>{% endif %}</tr>
+{% for p in s.pary %}
+<tr><td><code>{{ p.para }}</code></td>
+  <td class="l">{{ p.boczna.proc_ipd | num(2, true) }}</td><td class="l">{{ p.boczna.mm | num(2, true) }}</td>
+  <td class="l">{{ p.pionowa.proc_ipd | num(2, true) }}</td><td class="l">{{ p.pionowa.mm | num(2, true) }}</td>
+  {% if r.typ == '3D' %}<td class="l">{{ p.glebokosc.mm | num(2, true) }}</td>{% endif %}</tr>
+{% endfor %}
+</table><p class="pod">Boczna &gt; 0: punkt lewej strony pacjenta dalej od osi. Pionowa &gt; 0: punkt lewej strony niżej.</p></div>
+<div class="karta tabwrap"><table>
+<tr><th>Punkt środkowy</th><th class="l">odchylenie [% IPD]</th><th class="l">[{{ jedn }}]</th></tr>
+{% for m in s.srodkowe %}<tr><td><code>{{ m.punkt }}</code></td><td class="l">{{ m.proc_ipd | num(2, true) }}</td><td class="l">{{ m.mm | num(2, true) }}</td></tr>{% endfor %}
+</table><p class="pod">Odniesienie: {{ s.odniesienie_srodkowych }}; + = w stronę lewej strony pacjenta.</p></div>
+<div class="karta tabwrap"><table>
+<tr><th>Region</th><th class="l">średnia asymetria lokalna [% IPD]</th><th class="l">[{{ jedn }}]</th></tr>
+{% for g in s.regiony %}<tr><td>{{ g.region }}</td><td class="l">{{ g.proc_ipd | num(2) }}</td><td class="l">{{ g.mm | num(2) }}</td></tr>{% endfor %}
+</table></div>
